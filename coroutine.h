@@ -11,6 +11,8 @@
 const static int STACK_SIZE = 1024 * 1024 * 2;
 const static int DEFAULT_COROUTINES = 16;
 
+typedef cid_t size_t;
+
 enum CoroutineStatus {
   CO_READY,
   CO_RUNNING,
@@ -54,7 +56,7 @@ public:
     } else {
       for(auto & it : coroutines_) {
         if (!it) {
-          it = std::make_shared<Coroutine>(std::foward<FUNC>(func), std::forward<ARGS...>(args...));
+          it = std::make_shared<Coroutine>(std::forward<FUNC>(func), std::forward<ARGS...>(args...));
         }
       }
     }
