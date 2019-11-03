@@ -6,6 +6,8 @@
 
 namespace Fang {
 
+const static int STACK_SIZE = 1024 * 1024 * 2;
+
 enum CoroutineStatus {
   CO_READY,
   CO_RUNNING,
@@ -28,6 +30,10 @@ public:
     run_();
   }
 
+    CoroutineStatus getStatus() const {
+        return status_;
+    }
+
 private:
   std::function<void()> run_;
   std::vector<char> stack_;
@@ -39,10 +45,15 @@ private:
 
 class Scheduler {
 public:
+    Scheduler() {
+        stack_.resize(STACK_SIZE);
+    }
 private:
   size_t nco_;
-  size_t running;
+  size_t running_;
   std::vector<Coroutine> coroutines_;
+  vector<char> stack_;
+  ucontex_t main_;
 };
 
 } // namespace Fang
