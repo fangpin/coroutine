@@ -1,15 +1,27 @@
 #ifndef _COROUTINE_H
 #define _COROUTINE_H
 
-#include <iostream>
 #include <functional>
+#include <string>
 #include <vector>
 #include <memory>
+#include <iostream>
+#include <exception>
 
 #include <ucontext.h>
 
 const static int STACK_SIZE = 1024 * 1024 * 2;
 const static int DEFAULT_COROUTINES = 16;
+
+class CoroutineBaseException:public std::exception {
+public:
+  CoroutineBaseException(const std::string& msg): msg_(msg) {}
+  virtual const char* what() {
+    return msg_.c_str();
+  }
+private:
+  std::string msg_;
+};
 
 enum CoroutineStatus {
   CO_READY,
@@ -26,13 +38,13 @@ public:
 
 private:
   template <typename FUNC, typename... ARGS>
-  Coroutine(FUNC &&func, ARGS &&... args) : status_(CO_READY), stackSize_(0) {
+  Coroutine(FUNC &&func, ARGS &&... args) : status_(CO_READY) {
     run_ = [&]() { func(std::forward<ARGS...>(args...)); };
   }
 
   std::function<void()> run_;
   std::vector<char> stack_;
-  size_t stackSize_;
+  ucontext_t context_;
   CoroutineStatus status_;
 
   friend class Scheduler;
@@ -40,7 +52,7 @@ private:
 
 class Scheduler {
 public:
-  Scheduler() { stack_.resize(STACK_SIZE); }
+  Scheduler() : running_(-1) { stack_.resize(STACK_SIZE); }
 
   size_t running() const {
     return running_;
@@ -54,11 +66,19 @@ public:
     } else {
       for(auto & it : coroutines_) {
         if (!it) {
-          it = std::make_shared<Coroutine>(std::foward<FUNC>(func), std::forward<ARGS...>(args...));
+          it = std::make_shared<Coroutine>(std::forward<FUNC>(func), std::forward<ARGS...>(args...));
         }
       }
     }
     ++nco_;
+  }
+
+  void yield() {
+    Coroutine* co = coroutines_[running_].get();
+    running_ = -1;
+    co->stack_.clear();
+    co->status_ = CO_SUSPEND;
+    copy(stack_.begin(), stack_.end(), std::back_inserter(co->stack_));
   }
 
 private:
