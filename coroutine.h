@@ -78,7 +78,28 @@ public:
     running_ = -1;
     co->stack_.clear();
     co->status_ = CO_SUSPEND;
-    copy(stack_.begin(), stack_.end(), std::back_inserter(co->stack_));
+    std::copy(stack_.begin(), stack_.end(), std::back_inserter(co->stack_));
+    swap_context(&co->context_, &main_);
+  }
+
+  void resume(cid_t cid) {
+    if (cid >= nco_) {
+      throw CoroutineBaseException(std::string("invalid cid: ") +
+        std::to_string(cid));
+    }
+    coroutines_* co = coroutines_.[cid].get();
+    switch (co->status_) {
+      case CO_DEAD:
+        throw CoroutineBaseException("Current coroutine is dead.");
+      case CO_SUSPEND:
+
+        break;
+      case CO_SUSPEND:
+
+        break;
+      default:
+        throw CoroutineBaseException("Unknown coroutine status");
+    }
   }
 
 private:
